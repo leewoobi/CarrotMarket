@@ -11,11 +11,18 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   List<Map<String, String>> datas = [];
+  late String currentLocation;
+  final Map<String, String> locationTypeToString = {
+    "ara": "아라동",
+    "bora": "보라동",
+    "donam": "도남동"
+  };
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
+    currentLocation = "ara";
     datas = [
       {
         "cid": "1",
@@ -191,11 +198,42 @@ class _HomeState extends State<Home> {
           onTap: () {
             print('click');
           },
-          child: Row(
-            children: [
-              Text('아라동'),
-              Icon(Icons.arrow_drop_down),
-            ],
+          child: PopupMenuButton<String>(
+            offset: Offset(0, 25),
+            shape: ShapeBorder.lerp(
+                RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0)),
+                RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0)),
+                1),
+            onSelected: (String where) {
+              print(where);
+              setState(() {
+                currentLocation = where;
+              });
+            },
+            itemBuilder: (BuildContext context) {
+              return [
+                PopupMenuItem(
+                  value: "ara",
+                  child: Text("아라동"),
+                ),
+                PopupMenuItem(
+                  value: "bora",
+                  child: Text("보라동"),
+                ),
+                PopupMenuItem(
+                  value: "donam",
+                  child: Text("도남동"),
+                ),
+              ];
+            },
+            child: Row(
+              children: [
+                Text(locationTypeToString[currentLocation].toString()),
+                Icon(Icons.arrow_drop_down),
+              ],
+            ),
           ),
         ),
         elevation: 1,
@@ -211,7 +249,6 @@ class _HomeState extends State<Home> {
         ],
       ),
       body: _bodyWidget(),
-      // bottomNavigationBar: Container(color: Colors.red),
     );
   }
 }
