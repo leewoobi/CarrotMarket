@@ -1,3 +1,4 @@
+import 'package:carrot_market/repository/con_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
@@ -10,8 +11,8 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  List<Map<String, String>> datas = [];
   late String currentLocation;
+  late ContentsRepository contentsRepository;
   final Map<String, String> locationTypeToString = {
     "ara": "아라동",
     "bora": "보라동",
@@ -23,96 +24,26 @@ class _HomeState extends State<Home> {
     // TODO: implement initState
     super.initState();
     currentLocation = "ara";
-    datas = [
-      {
-        "cid": "1",
-        "image": "assets/images/ara-1.jpg",
-        "title": "네메시스 축구화275",
-        "location": "제주 제주시 아라동",
-        "price": "30000",
-        "likes": "2"
-      },
-      {
-        "cid": "2",
-        "image": "assets/images/ara-2.jpg",
-        "title": "LA갈비 5kg팔아요~",
-        "location": "제주 제주시 아라동",
-        "price": "100000",
-        "likes": "5"
-      },
-      {
-        "cid": "3",
-        "image": "assets/images/ara-3.jpg",
-        "title": "치약팝니다",
-        "location": "제주 제주시 아라동",
-        "price": "5000",
-        "likes": "0"
-      },
-      {
-        "cid": "4",
-        "image": "assets/images/ara-4.jpg",
-        "title": "[풀박스]맥북프로16인치 터치바 스페이스그레이",
-        "location": "제주 제주시 아라동",
-        "price": "2500000",
-        "likes": "6"
-      },
-      {
-        "cid": "5",
-        "image": "assets/images/ara-5.jpg",
-        "title": "디월트존기임팩",
-        "location": "제주 제주시 아라동",
-        "price": "150000",
-        "likes": "2"
-      },
-      {
-        "cid": "6",
-        "image": "assets/images/ara-6.jpg",
-        "title": "갤럭시s10",
-        "location": "제주 제주시 아라동",
-        "price": "180000",
-        "likes": "2"
-      },
-      {
-        "cid": "7",
-        "image": "assets/images/ara-7.jpg",
-        "title": "선반",
-        "location": "제주 제주시 아라동",
-        "price": "15000",
-        "likes": "2"
-      },
-      {
-        "cid": "8",
-        "image": "assets/images/ara-8.jpg",
-        "title": "냉장 쇼케이스",
-        "location": "제주 제주시 아라동",
-        "price": "80000",
-        "likes": "3"
-      },
-      {
-        "cid": "9",
-        "image": "assets/images/ara-9.jpg",
-        "title": "대우 미니냉장고",
-        "location": "제주 제주시 아라동",
-        "price": "30000",
-        "likes": "3"
-      },
-      {
-        "cid": "10",
-        "image": "assets/images/ara-10.jpg",
-        "title": "멜킨스 풀업 턱걸이 판매합니다.",
-        "location": "제주 제주시 아라동",
-        "price": "50000",
-        "likes": "7"
-      },
-    ];
+  }
+
+  @override
+  void didChangeDependencies() {
+    // TODO: implement didChangeDependencies
+    super.didChangeDependencies();
+    contentsRepository = ContentsRepository();
   }
 
   final oCcy = new NumberFormat("#,###", "ko_kr");
   String calcStringToWon(String priceString) {
+    if (priceString == "무료나눔") return priceString;
     return "${oCcy.format(int.parse(priceString))}원";
   }
 
-  Widget _bodyWidget() {
+  _loadContents() {
+    return contentsRepository.loadContentsFromLocation(currentLocation);
+  }
+
+  _makeDataList(dynamic datas) {
     return ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         itemBuilder: (BuildContext _context, int index) {
@@ -187,7 +118,28 @@ class _HomeState extends State<Home> {
             color: Colors.black.withOpacity(0.4),
           );
         },
-        itemCount: datas.length);
+        itemCount: datas?.length ?? 0);
+  }
+
+  Widget _bodyWidget() {
+    return FutureBuilder(
+        future: _loadContents(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('데이터 오류'));
+          }
+          if (snapshot.hasData) {
+            return _makeDataList(snapshot.data);
+          }
+
+          return Center(
+            child: Text('해당지역에 데이터가 없습니다.'),
+          );
+        });
   }
 
   @override
