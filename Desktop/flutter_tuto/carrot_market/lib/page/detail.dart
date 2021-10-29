@@ -1,20 +1,67 @@
+
+import 'dart:ui';
+
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:carrot_market/components/manorTempWidget.dart';
+import 'package:carrot_market/repository/con_repository.dart';
+import 'package:carrot_market/utils/data_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class DetailContentView extends StatefulWidget {
   final Map<String, String> data;
 
   const DetailContentView({Key? key, required this.data}) : super(key: key);
-
   @override
   _DetailContentViewState createState() => _DetailContentViewState();
 }
 
-class _DetailContentViewState extends State<DetailContentView> {
+class _DetailContentViewState extends State<DetailContentView> with SingleTickerProviderStateMixin {
+  late ContentsRepository contentsRepository;
+  // final scaffoldKey = GlobalKey<ScaffoldState>();
   late Size size;
   late List<Map<String, String>> imgList;
   late int _current;
+  late double scrollpositionToAplaha = 0;
+  late ScrollController _controller = ScrollController();
+  late AnimationController _animationController;
+  late Animation _colorTween;
+  late bool  isMyFavorCon = false;
+
+ @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+        contentsRepository = ContentsRepository();
+     isMyFavorCon = false;
+    _animationController = AnimationController(vsync: this);
+    _colorTween =ColorTween(begin: Colors.white, end: Colors.black).animate(_animationController);
+    _controller.addListener(() {
+      // print(_controller.offset);
+
+      setState(() {
+        if (_controller.offset> 255){
+               scrollpositionToAplaha = 255;
+        }else{
+             scrollpositionToAplaha = _controller.offset;
+        }
+
+        _animationController.value = scrollpositionToAplaha / 255;
+      });
+    });
+    _loadMyFavorContState();
+  }
+
+_loadMyFavorContState()  async {
+
+bool ck = await contentsRepository.isMyFavorItemCon(widget.data["cid"].toString());
+setState(() {
+  isMyFavorCon = ck;
+});
+print(ck);
+
+
+}
   @override
   void didChangeDependencies() {
     // TODO: implement didChangeDependencies
@@ -185,9 +232,9 @@ class _DetailContentViewState extends State<DetailContentView> {
   }
 
   Widget _bodyWidget() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
+    return CustomScrollView(controller: _controller,
+      slivers:[
+        SliverList(delegate: SliverChildListDelegate([
           _makeSliderImage(),
           _sellerSimpleInfo(),
           _line(),
@@ -195,36 +242,121 @@ class _DetailContentViewState extends State<DetailContentView> {
           _line(),
           _otherCekk(),
         ],
-      ),
-    );
+        ),
+        ),
+        SliverPadding(padding: EdgeInsets.symmetric(horizontal: 15)
+        ,sliver: SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2,mainAxisSpacing:10 ,crossAxisSpacing: 10),
+          delegate:SliverChildListDelegate(List.generate(20, (index) {
+
+          return Container(
+           child:  Column(
+             crossAxisAlignment: CrossAxisAlignment.stretch,
+             children: [
+             
+             ClipRRect(
+               borderRadius: BorderRadius.circular(10) ,
+               child: Container(color: Colors.grey, height: 120,))
+             ,Text("상품 제목",style:  TextStyle(fontSize: 14),),
+             Text("금액",style:  TextStyle(fontSize: 14, fontWeight:  FontWeight.bold),),
+             
+           ],),
+          );
+
+        }).toList()
+        ), ),
+        ),
+        
+      
+     
+
+
+      ]);
   }
 
   Widget _bottomBarWidget() {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
       height: 55,
       width: size.width,
-      color: Colors.red,
+      color: Colors.white,
+      child: Row(children: [
+        GestureDetector(
+          onTap: ()async{
+     print(isMyFavorCon);
+            if (isMyFavorCon)  {
+              //제거
+                  await contentsRepository.deleteMyFavoriteContent(widget.data["cid"].toString());
+            }else{
+                  await  contentsRepository.addMyFavoriteContent(widget.data);
+            } 
+            setState(() {
+                       isMyFavorCon = !isMyFavorCon;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content:  Text( isMyFavorCon ?  "관심목록에 추가됐습니니다."  : "관심목록에서 제거됐습니다."),
+      duration: Duration(seconds: 1),
+    ),);
+        
+          },
+          child: SvgPicture.asset( isMyFavorCon ? "assets/svg/heart_on.svg" :"assets/svg/heart_off.svg"  ,width: 25,height: 25,
+          color: Color(0xfff08f4f),)
+          ),
+          Container(
+            margin: const EdgeInsets.only(left: 15,right: 10),
+            width:1, height: 40 ,
+            color:  Colors.black.withOpacity(0.3),
+          ),
+          Column(children: [
+            Text( DataUtils.calcStringToWon(widget.data["price"].toString()),
+                 style:TextStyle(
+                   fontSize: 17,
+                   fontWeight: FontWeight.bold,)),
+                   Text("가격제안 불가",style:TextStyle( fontSize: 14, color: Colors.grey))
+          ],)
+,Expanded(child: Row(
+  mainAxisAlignment: MainAxisAlignment.end,
+  children: [
+        Container( 
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(5),
+            color: Color(0xfff08f4f)
+          ),
+          padding:const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+      child: Text("채팅으로 거래하기 ", style: TextStyle(color:Colors.white, fontSize: 16, fontWeight: FontWeight.bold),),),
+  ],
+))
+      ],),
     );
   }
+
+ Widget _makeIcon(IconData icon){
+   return  AnimatedBuilder(
+                
+                animation: _colorTween,
+                builder: (context, child) =>  Icon(icon, color: _colorTween.value));
+ }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+ 
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.white.withAlpha(scrollpositionToAplaha.toInt()),
           elevation: 0,
           leading: IconButton(
               onPressed: () {
                 Navigator.pop(context);
               },
-              icon: Icon(Icons.arrow_back, color: Colors.white)),
+              icon:_makeIcon(Icons.arrow_back)),
           actions: [
             IconButton(
-                onPressed: () {}, icon: Icon(Icons.share, color: Colors.white)),
+                onPressed: () {}, icon: _makeIcon(Icons.share)),
             IconButton(
                 onPressed: () {},
-                icon: Icon(Icons.more_vert, color: Colors.white)),
+                icon: _makeIcon(Icons.more_vert)),
           ]),
       body: _bodyWidget(),
       bottomNavigationBar: _bottomBarWidget(),

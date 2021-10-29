@@ -1,4 +1,11 @@
-class ContentsRepository {
+import 'dart:convert';
+
+import 'package:carrot_market/repository/local_repository.dart';
+
+class ContentsRepository  extends  LocalStorageRepository  {
+
+ 
+  final String My_Favor_Store_Key = "My_Favor_Store_Key";
   Map<String, dynamic> data = {
     "ara": [
       {
@@ -172,4 +179,58 @@ class ContentsRepository {
     await Future.delayed(Duration(milliseconds: 300));
     return data[location];
   }
+
+    Future<List?> loadFavorConts() async  {
+                   String? jsonString = await this.getStoredValue(My_Favor_Store_Key);
+                   if(jsonString != null){
+                List<dynamic> json =  jsonDecode(jsonString);
+                return json;
+                
+                  }else{
+                  return null;
+                }
+    }
+
+
+         addMyFavoriteContent(Map<String, String> content) async  {
+            List<dynamic>? favorConList = await loadFavorConts();
+            if (favorConList == null || !(favorConList is List)){
+              favorConList = [content];
+            }else {
+              favorConList.add(content);
+            }
+
+            updateFavorCont(favorConList);
+         }
+
+         void updateFavorCont(List favorConList)async{
+            await  this.storeValue(My_Favor_Store_Key, jsonEncode(favorConList));
+         }
+
+
+         deleteMyFavoriteContent(String cid) async{
+                     List<dynamic>? favorConList = await loadFavorConts();
+                     if(favorConList != null && favorConList is List){
+                       favorConList.removeWhere((data) => data["cid"] == cid);
+                     }
+          updateFavorCont(favorConList!);
+         }
+
+         isMyFavorItemCon(String cid )async{
+    
+          bool isMyFavoritemContents = false;
+          List? json = await loadFavorConts();
+          if(json == null || !(json is List)){
+                return false;
+          }else{
+            for(dynamic data in json){
+              if(data["cid"] == cid ){
+                  isMyFavoritemContents = true;
+                    break;
+              }
+            }
+          }
+          print(json);
+          return isMyFavoritemContents;
+         }
 }
